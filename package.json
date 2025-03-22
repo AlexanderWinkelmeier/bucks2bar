@@ -1,0 +1,14 @@
+{
+  "name": "bucks2bar",
+  "version": "1.0.0",
+  "description": "This is the Bucks2Bar project. It's a simple project built with HTML and the latest version of Bootstrap.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
