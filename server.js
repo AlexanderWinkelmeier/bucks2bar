@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer"); s
+const nodemailer = require("nodemailer");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const sanitizeHtml = require('sanitize-html');
