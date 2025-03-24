@@ -1,40 +1,43 @@
+require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer"); s
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const sanitizeHtml = require('sanitize-html');
 
 const app = express();
-app.use(bodyParser.json({ limit: "10mb" })); // Increase limit for large images
 app.use(cors());
+app.use(bodyParser.json({ limit: "10mb" }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later",
+});
+
+app.use(limiter);
+
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
 
 app.post("/send-email", async (req, res) => {
   try {
-    // Validate request body exists
-    if (!req.body) {
-      return res.status(400).send("No request body received");
-    }
-
     const { email, image } = req.body;
-    console.log("SEND EMAIL REQUEST", {
-      email: email ? "email provided" : "email missing",
-      imageProvided: image ? true : false
-    });
 
-    // Validate email and image
-    if (!email) {
-      return res.status(400).send("Email address is required");
+    if (!isValidEmail(email)) {
+      return res.status(400).send("Invalid email address");
     }
 
-    if (!image) {
-      return res.status(400).send("Image data is required");
-    }
+    const sanitizedEmail = sanitizeHtml(email);
+    const sanitizedImage = sanitizeHtml(image);
 
-    // Validate image format
-    if (!image.includes('base64,')) {
+    if (!sanitizedImage.includes('base64,')) {
       return res.status(400).send("Image should be in base64 format");
     }
 
-    // Create a transporter object using SMTP transport
     let transporter = nodemailer.createTransport({
       host: "smtp.resend.com",
       port: 587,
@@ -45,13 +48,11 @@ app.post("/send-email", async (req, res) => {
       },
     });
 
-    // Extract base64 content from the image data URL
-    const base64Data = image.split("base64,")[1];
+    const base64Data = sanitizedImage.split("base64,")[1];
 
-    // Email options
     let mailOptions = {
       from: "test@resend.dev",
-      to: email,
+      to: sanitizedEmail,
       subject: "Your Chart Image",
       text: "Please find your chart image attached.",
       attachments: [
@@ -63,12 +64,11 @@ app.post("/send-email", async (req, res) => {
       ],
     };
 
-    // Send email
     await transporter.sendMail(mailOptions);
     res.status(200).send("Email sent successfully!");
   } catch (error) {
     console.error("Error sending email:", error);
-    res.status(500).send("Failed to send email: " + error.message);
+    res.status(500).send("Failed to send email. Please try again later.");
   }
 });
 
